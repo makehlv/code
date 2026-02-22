@@ -12,7 +12,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: kk <command> [flags]")
+		fmt.Println("usage: ept <command> [flags]")
 		os.Exit(1)
 	}
 

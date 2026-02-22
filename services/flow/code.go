@@ -7,7 +7,7 @@ import (
 )
 
 func (s *CodeFlowManageService) CleanFallbackBranches() error {
-	branches, err := s.clients.Git.ListBranchesWithPrefix("kk-fallback")
+	branches, err := s.clients.Git.ListBranchesWithPrefix("code-fallback")
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (s *CodeFlowManageService) Squash(comparableBranch string, commitMessage st
 	}
 
 	ts := s.clients.Git.GenerateTimestamp()
-	fallbackBranch := fmt.Sprintf("%s-%s-%s", "kk-fallback", currentBranch, ts)
+	fallbackBranch := fmt.Sprintf("%s-%s-%s", "code-fallback", currentBranch, ts)
 	err = s.clients.Git.NewBranch(fallbackBranch)
 	if err != nil {
 		return err
