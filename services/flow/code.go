@@ -74,7 +74,38 @@ func (s *CodeFlowManageService) Push() error {
 	return nil
 }
 
-func (s *CodeFlowManageService) Squash(comparableBranch string, commitMessage string) error {
+func (s *CodeFlowManageService) JiraLink() (string, error) {
+	if s.config.JiraURL == "" {
+		return "", fmt.Errorf("jiraURL is not set")
+	}
+
+	branch, err := s.clients.Git.GetCurrentBranchName()
+	if err != nil {
+		return "", err
+	}
+
+	return s.config.JiraURL + branchPrefixFromBranch(branch), nil
+}
+
+func (s *CodeFlowManageService) GitlabLink(mergeRequests bool) (string, error) {
+	if s.config.GitlabURL == "" {
+		return "", fmt.Errorf("gitlabURL is not set")
+	}
+
+	repoName, err := s.clients.Git.GetRepoName()
+	if err != nil {
+		return "", err
+	}
+
+	link := s.config.GitlabURL + repoName
+	if mergeRequests {
+		link += "/-/merge_requests"
+	}
+
+	return link, nil
+}
+
+func (s *CodeFlowManageService) Squash(comparableBranch string, commitMessage string, push bool) error {
 	status, err := s.clients.Git.StatusWithPorcelain()
 	if err != nil {
 		return fmt.Errorf("failed to get working tree status: %s", err)
@@ -134,18 +165,31 @@ func (s *CodeFlowManageService) Squash(comparableBranch string, commitMessage st
 	}
 	s.logger.Info("Squash", "squash committed as", message, "on branch", currentBranch)
 
+	if push {
+		if err := s.clients.Git.ForcePush(currentBranch); err != nil {
+			return err
+		}
+		s.logger.Info("Squash", "force pushed branch", currentBranch)
+	}
+
 	return nil
 }
 
 var branchRegex = regexp.MustCompile(`^([A-Za-z]+)[/-](\d+)-(.+)$`)
+
+func branchPrefixFromBranch(branch string) string {
+	matches := branchRegex.FindStringSubmatch(branch)
+	if matches == nil {
+		return branch
+	}
+	return fmt.Sprintf("%s-%s", matches[1], matches[2])
+}
 
 func commitMessageFromBranch(branch string) string {
 	matches := branchRegex.FindStringSubmatch(branch)
 	if matches == nil {
 		return branch
 	}
-	prefix := matches[1]
-	number := matches[2]
 	description := strings.ReplaceAll(matches[3], "-", " ")
-	return fmt.Sprintf("[%s-%s] %s", prefix, number, description)
+	return fmt.Sprintf("[%s] %s", branchPrefixFromBranch(branch), description)
 }

@@ -12,14 +12,18 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: ept <command> [flags]")
+		fmt.Println("usage: code <command> [flags]")
 		os.Exit(1)
 	}
 
 	clients := clients.NewClients()
 	logger := slog.New(NewColorHandler(os.Stderr, slog.LevelInfo))
-	config := config.NewConfig()
-	svc := services.NewServices(clients, logger, config)
+	cfg, err := config.NewConfig()
+	if err != nil {
+		logger.Error("config failed", "error", err)
+		os.Exit(1)
+	}
+	svc := services.NewServices(clients, logger, cfg)
 
 	command := os.Args[1]
 	switch command {
@@ -29,7 +33,7 @@ func main() {
 			comparableBranch = "develop"
 		}
 		message := parseFlag(os.Args[2:], "--message")
-		if err := svc.Flow.Squash(comparableBranch, message); err != nil {
+		if err := svc.Flow.Squash(comparableBranch, message, hasFlag(os.Args[2:], "--push-force")); err != nil {
 			logger.Error("squash failed", "error", err)
 			os.Exit(1)
 		}
@@ -48,6 +52,20 @@ func main() {
 			logger.Error("push failed", "error", err)
 			os.Exit(1)
 		}
+	case "jira":
+		link, err := svc.Flow.JiraLink()
+		if err != nil {
+			logger.Error("jira failed", "error", err)
+			os.Exit(1)
+		}
+		fmt.Println(link)
+	case "gitlab":
+		link, err := svc.Flow.GitlabLink(hasFlag(os.Args[2:], "--mr"))
+		if err != nil {
+			logger.Error("gitlab failed", "error", err)
+			os.Exit(1)
+		}
+		fmt.Println(link)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 		os.Exit(1)
@@ -61,4 +79,13 @@ func parseFlag(args []string, flag string) string {
 		}
 	}
 	return ""
+}
+
+func hasFlag(args []string, flag string) bool {
+	for _, arg := range args {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
 }

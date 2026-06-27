@@ -23,6 +23,20 @@ func (g *GitClient) GetCurrentBranchName() (string, error) {
 	return branch, nil
 }
 
+func (g *GitClient) GetRepoName() (string, error) {
+	out, err := exec.Command("git", "remote", "get-url", "origin").Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get origin remote url: %w", err)
+	}
+
+	repoName := repoNameFromRemoteURL(strings.TrimSpace(string(out)))
+	if repoName == "" {
+		return "", fmt.Errorf("failed to parse repo name from origin remote url")
+	}
+
+	return repoName, nil
+}
+
 func (p *GitClient) GenerateTimestamp() string {
 	return time.Now().Format("2006-01-02-15-04-05")
 }
@@ -69,6 +83,14 @@ func (g *GitClient) Push(branchName string) error {
 	out, err := exec.Command("git", arg...).Output()
 	if err != nil {
 		return fmt.Errorf("failed to push %s", out)
+	}
+	return err
+}
+
+func (g *GitClient) ForcePush(branchName string) error {
+	out, err := exec.Command("git", "push", "--force", "origin", branchName).Output()
+	if err != nil {
+		return fmt.Errorf("failed to force push %s", out)
 	}
 	return err
 }
@@ -125,4 +147,13 @@ func (g *GitClient) ListBranchesWithPrefix(prefix string) ([]string, error) {
 		}
 	}
 	return branches, nil
+}
+
+func repoNameFromRemoteURL(remoteURL string) string {
+	remoteURL = strings.TrimSuffix(strings.TrimRight(remoteURL, "/"), ".git")
+	separatorIndex := strings.LastIndexAny(remoteURL, "/:")
+	if separatorIndex == -1 {
+		return remoteURL
+	}
+	return remoteURL[separatorIndex+1:]
 }
