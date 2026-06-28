@@ -2,7 +2,9 @@ package flow
 
 import (
 	"fmt"
+	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -103,6 +105,17 @@ func (s *CodeFlowManageService) GitlabLink(mergeRequests bool) (string, error) {
 	}
 
 	return link, nil
+}
+
+func (s *CodeFlowManageService) OpenInChromeOrPrint(link string) {
+	if runtime.GOOS != "darwin" {
+		fmt.Println(link)
+		return
+	}
+
+	if err := exec.Command("open", "-a", "Google Chrome", link).Run(); err != nil {
+		fmt.Println(link)
+	}
 }
 
 func (s *CodeFlowManageService) Squash(comparableBranch string, commitMessage string, push bool) error {

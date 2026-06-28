@@ -58,14 +58,22 @@ func main() {
 			logger.Error("jira failed", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(link)
+		if hasFlag(os.Args[2:], "--link") {
+			fmt.Println(link)
+			return
+		}
+		svc.Flow.OpenInChromeOrPrint(link)
 	case "gitlab":
 		link, err := svc.Flow.GitlabLink(hasFlag(os.Args[2:], "--mr"))
 		if err != nil {
 			logger.Error("gitlab failed", "error", err)
 			os.Exit(1)
 		}
-		fmt.Println(link)
+		if hasFlag(os.Args[2:], "--link") {
+			fmt.Println(link)
+			return
+		}
+		svc.Flow.OpenInChromeOrPrint(link)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 		os.Exit(1)
